@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+model Document {
+  id           String         @id @default(cuid())
+  userId       String
+  fileName     String
+  originalName String
+  mimeType     String
+  sizeInBytes  Int
+  storagePath  String
+  textContent  String         @db.Text
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  chunks       DocumentChunk[]
+  chats        ChatDocument[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model DocumentChunk {
+  id            String   @id @default(cuid())
+  documentId    String
+  chunkIndex    Int
+  content       String   @db.Text
+  tokenEstimate Int
+  embedding     Json
+  createdAt     DateTime @default(now())
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+}
+
+model Chat {
+  id         String       @id @default(cuid())
+  userId     String
+  title      String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  documents  ChatDocument[]
+  messages   ChatMessage[]
+  queryCache QueryCache[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model ChatDocument {
+  chatId     String
+  documentId String
+  attachedAt DateTime @default(now())
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, documentId])
+  @@index([documentId])
+}
+
+model ChatMessage {
+  id         String    @id @default(cuid())
+  chatId     String
+  role       ChatRole
+  content    String    @db.Text
+  sources    Json?
+  confidence Float?
+  createdAt  DateTime  @default(now())
+  chat       Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+}
+
+model QueryCache {
+  id                 String   @id @default(cuid())
+  chatId             String
+  scopeKey           String
+  normalizedQuestion String
+  response           String   @db.Text
+  sources            Json
+  confidence         Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  chat               Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, scopeKey, normalizedQuestion])
+  @@index([chatId, updatedAt(sort: Desc)])
+}
