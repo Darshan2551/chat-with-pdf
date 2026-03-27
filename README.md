@@ -242,6 +242,62 @@ Why this is the safest default:
 - Production object storage avoids ephemeral filesystem issues.
 - `next.config.ts` uses `output: "standalone"` and the repository includes a `Dockerfile`.
 
+## Fly.io Deployment
+
+This repository now includes a ready-to-edit [fly.toml](./fly.toml).
+
+Before first deploy:
+
+1. Install `flyctl`
+2. Log in:
+
+```bash
+fly auth login
+```
+
+3. Create an app without deploying immediately:
+
+```bash
+fly launch --no-deploy
+```
+
+4. Replace the generated `fly.toml` with the repository version, or keep this repo's `fly.toml` and change:
+
+```toml
+app = "replace-with-your-fly-app-name"
+```
+
+5. Set your Fly secrets:
+
+```bash
+fly secrets set DATABASE_URL="..."
+fly secrets set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="..."
+fly secrets set CLERK_SECRET_KEY="..."
+fly secrets set NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
+fly secrets set NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
+fly secrets set GEMINI_API_KEY="..."
+fly secrets set STORAGE_PROVIDER="s3"
+fly secrets set S3_BUCKET="..."
+fly secrets set S3_REGION="..."
+fly secrets set S3_ENDPOINT="..."
+fly secrets set S3_ACCESS_KEY_ID="..."
+fly secrets set S3_SECRET_ACCESS_KEY="..."
+fly secrets set S3_FORCE_PATH_STYLE="false"
+```
+
+6. Deploy:
+
+```bash
+fly deploy
+```
+
+Notes:
+
+- `fly.toml` uses `release_command = "npx prisma db push"` so the schema is synced before Machines are updated.
+- The health check uses `GET /`, which stays public and avoids requiring auth.
+- The current config starts on port `3000` and expects the container to listen on `0.0.0.0`.
+- Use S3-compatible storage in production. Do not rely on Fly local disk for uploaded documents unless you intentionally redesign around volumes and single-region persistence.
+
 ## Docker Deployment
 
 Build locally:
