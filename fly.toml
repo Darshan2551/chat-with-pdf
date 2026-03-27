@@ -1,4 +1,4 @@
-app = "replace-with-your-fly-app-name"
+app = "chat-with-pdf"
 
 [build]
   dockerfile = "Dockerfile"
